@@ -1,116 +1,86 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
+import {useState} from 'react';
+import {StyleSheet, StatusBar, Text, View, Button, Image} from 'react-native';
+import {Appbar} from 'react-native-paper';
 
-import React from 'react';
-import type {Node} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+App = () => {
+  const [imageIndex, setImageIndex] = useState(0);
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  const imageList = [
+    'https://indiagardening.com/wp-content/uploads/2021/12/Dahlia2.jpg',
+    'https://www.farmersalmanac.com/wp-content/uploads/2021/04/forget-me-not-flower-as309740666.jpeg',
+  ];
 
-/* $FlowFixMe[missing-local-annot] The type annotation(s) required by Flow's
- * LTI update could not be added via codemod */
-const Section = ({children, title}): Node => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
+  console.log(imageIndex);
 
-const App: () => Node = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const prevImage = () => {
+    if (imageIndex === 0) {
+      setImageIndex(imageList.length - 1);
+      return;
+    }
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    setImageIndex(imageIndex - 1);
+  };
+
+  const nextImage = () => {
+    if (imageIndex > imageList.length - 2) {
+      setImageIndex(0);
+      return;
+    }
+
+    setImageIndex(imageIndex + 1);
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <>
+      <Appbar.Header>
+        <Appbar.Content
+          title="Pictures Application"
+          color="#ffff"
+          titleStyle={{alignSelf: 'center'}}
+        />
+      </Appbar.Header>
+      <StatusBar backgroundColor="#004a9f" barStyle="light-content" />
+      <View style={styles.MainContainer}>
+        <Image
+          source={{
+            uri: imageList[imageIndex],
+          }}
+          style={styles.ImageContainer}
+        />
+        <View style={styles.buttonContainer}>
+          <View style={{width: '48%'}}>
+            <Button title="Previous" onPress={() => prevImage()} />
+          </View>
+          <View style={{width: '48%'}}>
+            <Button title="Next" onPress={() => nextImage()} />
+          </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  MainContainer: {
+    padding: 15,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+
+  ImageContainer: {
+    width: '100%',
+    height: '70%',
+    marginBottom: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  highlight: {
-    fontWeight: '700',
+
+  text: {
+    textAlign: 'center',
+    margin: 12,
+    fontSize: 22,
+    fontWeight: '100',
   },
 });
 
