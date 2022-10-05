@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {
   StyleSheet,
   StatusBar,
@@ -9,31 +9,49 @@ import {
   ToastAndroid,
 } from 'react-native';
 import {Appbar, TextInput} from 'react-native-paper';
+import {openDatabase} from 'react-native-sqlite-storage';
 
 App = () => {
-  const [images, setImages] = useState([
-    'https://indiagardening.com/wp-content/uploads/2021/12/Dahlia2.jpg',
-    'https://www.farmersalmanac.com/wp-content/uploads/2021/04/forget-me-not-flower-as309740666.jpeg',
-  ]);
+  const databaseHelper = openDatabase(
+    {
+      name: 'imagesDatabase',
+      location: 'default',
+    },
+    () => {},
+    error => {
+      console.log(error);
+    },
+  );
+
+  const [images, setImages] = useState([]);
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState('');
 
-  const prevImage = () => {
-    if (imageIndex === 0) {
-      setImageIndex(images.length - 1);
-      return;
-    }
+  /* 
+    'https://indiagardening.com/wp-content/uploads/2021/12/Dahlia2.jpg',
+    'https://www.farmersalmanac.com/wp-content/uploads/2021/04/forget-me-not-flower-as309740666.jpeg',
+  */
 
-    setImageIndex(imageIndex - 1);
-  };
+  useEffect(() => {
+    databaseHelper.transaction(tx => {
+      tx.executeSql(
+        'CREATE TABLE IF NOT EXISTS ' +
+          'images ' +
+          '(id INTEGER PRIMARY KEY AUTOINCREMENT, url VARCHAR(2083));',
+      );
+    });
+    loadImages();
+  }, []);
 
-  const nextImage = () => {
-    if (imageIndex > images.length - 2) {
-      setImageIndex(0);
-      return;
-    }
-
-    setImageIndex(imageIndex + 1);
+  const loadImages = () => {
+    databaseHelper.transaction(tx => {
+      tx.executeSql('SELECT * FROM images ORDER BY id', [], (tx, results) => {
+        const tempData = [];
+        for (let i = 0; i < results.rows.length; ++i)
+          tempData.push(results.rows.item(i));
+        setImages(tempData);
+      });
+    });
   };
 
   const addImage = () => {
@@ -47,9 +65,40 @@ App = () => {
       return;
     }
 
-    images.push(imageUrl);
+    databaseHelper.transaction(tx => {
+      tx.executeSql(
+        'INSERT INTO images (url) VALUES (?)',
+        [imageUrl],
+        (tx, results) => {
+          if (results.rowsAffected > 0) {
+            ToastAndroid.show('Image added successfully', ToastAndroid.SHORT);
+          } else
+            ToastAndroid.show(
+              'Problem when adding image. Please try again!',
+              ToastAndroid.SHORT,
+            );
+        },
+      );
+    });
+
     setImageUrl('');
-    ToastAndroid.show('Image uploaded successfully', ToastAndroid.SHORT);
+    loadImages();
+  };
+
+  const prevImage = () => {
+    if (imageIndex === 0) {
+      setImageIndex(images.length - 1);
+      return;
+    }
+    setImageIndex(imageIndex - 1);
+  };
+
+  const nextImage = () => {
+    if (imageIndex > images.length - 2) {
+      setImageIndex(0);
+      return;
+    }
+    setImageIndex(imageIndex + 1);
   };
 
   return (
@@ -67,12 +116,16 @@ App = () => {
           value={imageUrl}
           onChangeText={imageUrl => setImageUrl(imageUrl)}
         />
-        <Image
-          source={{
-            uri: images[imageIndex],
-          }}
-          style={styles.ImageContainer}
-        />
+        {images.length === 0 ? (
+          <Text style={styles.noImageText}>No Image Available</Text>
+        ) : (
+          <Image
+            source={{
+              uri: images[imageIndex].url,
+            }}
+            style={styles.ImageContainer}
+          />
+        )}
         <View style={styles.buttonContainer}>
           <View style={{width: '48%'}}>
             <Button title="Previous" onPress={() => prevImage()} />
@@ -89,6 +142,19 @@ App = () => {
 const styles = StyleSheet.create({
   MainContainer: {
     padding: 15,
+  },
+
+  noImageText: {
+    width: '100%',
+    height: '70%',
+    marginBottom: 20,
+    marginTop: 20,
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlignVertical: 'center',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: 'gray',
   },
 
   ImageContainer: {
