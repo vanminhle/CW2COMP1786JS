@@ -7,9 +7,11 @@ import {
   Button,
   Image,
   ToastAndroid,
+  PermissionsAndroid,
 } from 'react-native';
 import {Appbar, TextInput} from 'react-native-paper';
 import {openDatabase} from 'react-native-sqlite-storage';
+import {launchCamera} from 'react-native-image-picker';
 
 App = () => {
   const databaseHelper = openDatabase(
@@ -30,6 +32,7 @@ App = () => {
   /* 
     'https://indiagardening.com/wp-content/uploads/2021/12/Dahlia2.jpg',
     'https://www.farmersalmanac.com/wp-content/uploads/2021/04/forget-me-not-flower-as309740666.jpeg',
+    https://dogily.vn/wp-content/uploads/2020/12/Meo-ALN-xam-xanh-2.jpg
   */
 
   useEffect(() => {
@@ -41,6 +44,7 @@ App = () => {
       );
     });
     loadImages();
+    requestPermission();
   }, []);
 
   const loadImages = () => {
@@ -54,17 +58,25 @@ App = () => {
     });
   };
 
-  const addImage = () => {
+  const urlCheck = () => {
     if (imageUrl.length === 0) {
       ToastAndroid.show('Please input image url', ToastAndroid.SHORT);
       return;
     }
 
-    if (imageUrl.match(/\.(jpeg|jpg|gif|png)$/) === null) {
+    if (
+      imageUrl.match(
+        /(?:(?:https?:\/\/))[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/=]*(\.jpg|\.png|\.jpeg))/g,
+      ) === null
+    ) {
       ToastAndroid.show('Image url is invalid!', ToastAndroid.SHORT);
       return;
     }
 
+    addImage(imageUrl);
+  };
+
+  const addImage = imageUrl => {
     databaseHelper.transaction(tx => {
       tx.executeSql(
         'INSERT INTO images (url) VALUES (?)',
@@ -101,12 +113,54 @@ App = () => {
     setImageIndex(imageIndex + 1);
   };
 
+  // camera
+  const requestPermission = async () => {
+    try {
+      const grantedCamera = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+      );
+
+      const grantedStorage = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+      );
+
+      if (
+        grantedCamera === PermissionsAndroid.RESULTS.GRANTED &&
+        grantedStorage === PermissionsAndroid.RESULTS.GRANTED
+      ) {
+        ToastAndroid.show('Permission granted', ToastAndroid.SHORT);
+      } else {
+        ToastAndroid.show('Permission denied', ToastAndroid.SHORT);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCamera = async () => {
+    const result = await launchCamera({
+      includeBase64: true,
+      mediaType: 'photo',
+      saveToPhotos: true,
+    });
+
+    if (result.errorCode === 'others' || result.errorMessage === 'permission') {
+      ToastAndroid.show(
+        `Permission denied. Can't using this feature`,
+        ToastAndroid.SHORT,
+      );
+    }
+
+    addImage('data:image/jpg;base64,' + result.assets[0].base64);
+    loadImages();
+  };
+
   return (
     <>
       <Appbar.Header>
         <Appbar.Content title="Pictures Application" color="#ffff" />
-        <Appbar.Action icon="check" onPress={() => addImage()} />
-        <Appbar.Action icon="camera" />
+        <Appbar.Action icon="check" onPress={() => urlCheck()} />
+        <Appbar.Action icon="camera" onPress={() => handleCamera()} />
       </Appbar.Header>
       <StatusBar backgroundColor="#004a9f" barStyle="light-content" />
       <View style={styles.MainContainer}>
